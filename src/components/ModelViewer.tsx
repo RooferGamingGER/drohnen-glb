@@ -27,7 +27,7 @@ import LoadingOverlay from '@/components/viewer/LoadingOverlay';
 import DropZone from '@/components/viewer/DropZone';
 import MeasurementToolsPanel from '@/components/viewer/MeasurementToolsPanel';
 import ScreenshotDialog from '@/components/ScreenshotDialog';
-import TouchControlsPanel from '@/components/TouchControlsPanel';
+import TouchControlsPanel, { TouchControlMode } from '@/components/TouchControlsPanel';
 
 interface ModelViewerProps {
   forceHideHeader?: boolean;
@@ -37,14 +37,14 @@ interface ModelViewerProps {
 const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, initialFile = null }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { isMobile, isTablet, isPortrait } = useIsMobile();
+  const { isMobile, isTablet, isPortrait, hasMouse, isTouchDevice } = useIsMobile();
   const [showMeasurementTools, setShowMeasurementTools] = useState(false);
   const [measurementsVisible, setMeasurementsVisible] = useState(true);
   const [screenshotData, setScreenshotData] = useState<string | null>(null);
   const [showScreenshotDialog, setShowScreenshotDialog] = useState(false);
   const [savedScreenshots, setSavedScreenshots] = useState<{id: string, imageDataUrl: string, description: string}[]>([]);
   
-  const [touchMode, setTouchMode] = useState<'none' | 'pan' | 'rotate' | 'zoom'>('none');
+  const [touchMode, setTouchMode] = useState<TouchControlMode>('none');
   const [isDragging, setIsDragging] = useState(false);
   const [draggedPoint, setDraggedPoint] = useState<THREE.Mesh | null>(null);
   const [selectedMeasurementId, setSelectedMeasurementId] = useState<string | null>(null);
@@ -58,10 +58,11 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   const shouldShowHeader = useCallback(() => {
     if (forceHideHeader) return false;
     
-    if (isPortrait) return !showMeasurementTools;
+    // Don't show header in portrait mode on touch devices
+    if (isPortrait && isTouchDevice) return false;
     
     return !showMeasurementTools;
-  }, [forceHideHeader, isPortrait, showMeasurementTools]);
+  }, [forceHideHeader, isPortrait, showMeasurementTools, isTouchDevice]);
   
   const [showHeader, setShowHeader] = useState(shouldShowHeader());
   
@@ -70,10 +71,11 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   }, [shouldShowHeader, showMeasurementTools, isPortrait]);
   
   useEffect(() => {
-    if (!isPortrait) {
+    // Show measurement tools in non-portrait mode or if a mouse is connected
+    if ((!isPortrait || hasMouse) && !showMeasurementTools) {
       setShowMeasurementTools(true);
     }
-  }, [isPortrait]);
+  }, [isPortrait, hasMouse, showMeasurementTools]);
   
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   
@@ -175,6 +177,16 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   }, [modelViewer]);
 
   const handleToolChange = useCallback((tool: any) => {
+    // Only allow tool selection when mouse is available
+    if (!hasMouse && isTouchDevice) {
+      toast({
+        title: "Maus erforderlich",
+        description: "Messungen können nur mit einer Maus durchgeführt werden.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (tool !== 'none') {
       modelViewer.measurements.forEach(measurement => {
         if (measurement.editMode) {
@@ -183,7 +195,7 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
       });
     }
     modelViewer.setActiveTool(tool);
-  }, [modelViewer]);
+  }, [modelViewer, hasMouse, isTouchDevice, toast]);
 
   const handleNewProject = useCallback(() => {
     if (modelViewer.loadedModel) {
@@ -722,36 +734,48 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
     }
   }, [touchMode]);
 
-  const handleTouchModeChange = useCallback((mode: 'none' | 'pan' | 'rotate' | 'zoom') => {
+  const handleTouchModeChange = useCallback((mode: TouchControlMode) => {
     console.log(`Touch mode changed to: ${mode}`);
     setTouchMode(mode);
 
-    if (mode === 'zoom' && modelViewer.controls) {
-      const zoomFactor = 0.8;
-      const camera = modelViewer.camera;
-      
-      if (camera) {
-        const direction = new THREE.Vector3();
-        direction.subVectors(camera.position, modelViewer.controls.target).normalize();
-        
-        const adaptiveZoomFactor = calculateZoomFactor(
-          camera,
-          modelViewer.controls.target,
-          modelSizeRef.current
-        );
-        
-        camera.position.sub(direction.multiplyScalar(2 * adaptiveZoomFactor));
-        
-        if (modelViewer.controls) {
-          modelViewer.controls.update();
-        }
+    if (modelViewer.controls) {
+      // Disable any active measurement tools when switching touch modes
+      if (modelViewer.activeTool !== 'none') {
+        modelViewer.setActiveTool('none');
       }
-      
-      setTimeout(() => {
-        setTouchMode('none');
-      }, 250);
+
+      // Configure OrbitControls based on the selected mode
+      modelViewer.controls.enableRotate = mode === 'rotate';
+      modelViewer.controls.enablePan = mode === 'pan';
+      modelViewer.controls.enableZoom = mode === 'zoom';
+
+      if (mode === 'zoom') {
+        const zoomFactor = 0.8;
+        const camera = modelViewer.camera;
+        
+        if (camera) {
+          const direction = new THREE.Vector3();
+          direction.subVectors(camera.position, modelViewer.controls.target).normalize();
+          
+          const adaptiveZoomFactor = calculateZoomFactor(
+            camera,
+            modelViewer.controls.target,
+            modelSizeRef.current
+          );
+          
+          camera.position.sub(direction.multiplyScalar(2 * adaptiveZoomFactor));
+          
+          if (modelViewer.controls) {
+            modelViewer.controls.update();
+          }
+        }
+        
+        setTimeout(() => {
+          setTouchMode('none');
+        }, 250);
+      }
     }
-  }, [modelViewer.controls, modelViewer.camera]);
+  }, [modelViewer.controls, modelViewer.camera, modelViewer.activeTool, modelViewer]);
 
   const handleContextMenu = useCallback((event: MouseEvent) => {
     event.preventDefault();
@@ -814,29 +838,33 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   useEffect(() => {
     if (!modelViewer.controls) return;
     
-    modelViewer.controls.enableRotate = false;
-    modelViewer.controls.enablePan = false;
-    modelViewer.controls.enableZoom = false;
-    
-    switch (touchMode) {
-      case 'rotate':
-        modelViewer.controls.enableRotate = true;
-        break;
-      case 'pan':
-        modelViewer.controls.enablePan = true;
-        break;
-      case 'zoom':
-        modelViewer.controls.enableZoom = true;
-        break;
-      case 'none':
-      default:
-        if (!isMobile) {
+    // Configure default control behavior based on device type
+    if (isTouchDevice && !hasMouse) {
+      // For touch-only devices, disable all controls by default
+      modelViewer.controls.enableRotate = false;
+      modelViewer.controls.enablePan = false;
+      modelViewer.controls.enableZoom = false;
+      
+      // Only enable specific controls based on selected mode
+      switch (touchMode) {
+        case 'rotate':
           modelViewer.controls.enableRotate = true;
+          break;
+        case 'pan':
+          modelViewer.controls.enablePan = true;
+          break;
+        case 'zoom':
           modelViewer.controls.enableZoom = true;
-        }
-        break;
+          break;
+      }
+    } else {
+      // For mouse devices, enable standard controls
+      modelViewer.controls.enableRotate = true;
+      modelViewer.controls.enableZoom = true;
+      modelViewer.controls.enablePan = true;
     }
     
+    // Configure touch handling
     if (modelViewer.controls.enabled) {
       modelViewer.controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
@@ -852,7 +880,7 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
     }
     
     modelViewer.controls.update();
-  }, [touchMode, modelViewer.controls, modelViewer.loadedModel, isMobile]);
+  }, [touchMode, modelViewer.controls, modelViewer.loadedModel, isTouchDevice, hasMouse]);
 
   useEffect(() => {
     if (isMobile && !isPortrait && modelViewer.loadedModel && !showMeasurementTools) {
@@ -877,179 +905,3 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-      
-      window.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('mousedown', handleRightMouseDown);
-      window.removeEventListener('mousemove', handleRightMouseMove);
-      window.removeEventListener('mouseup', handleRightMouseUp);
-    };
-  }, [
-    handleMouseMove, 
-    handleMouseDown, 
-    handleMouseUp, 
-    handleTouchStart, 
-    handleTouchMove, 
-    handleTouchEnd,
-    handleContextMenu,
-    handleRightMouseDown,
-    handleRightMouseMove,
-    handleRightMouseUp
-  ]);
-
-  useEffect(() => {
-    const handleOrientationChange = () => {
-      if (modelViewer.loadedModel) {
-        setTimeout(() => {
-          console.log("Zentrieren nach Orientierungswechsel");
-          setModelCentered(false);
-          if (modelViewer.camera && modelViewer.controls) {
-            optimallyCenterModel(
-              modelViewer.loadedModel,
-              modelViewer.camera,
-              modelViewer.controls
-            );
-            
-            const box = new THREE.Box3().setFromObject(modelViewer.loadedModel);
-            const size = new THREE.Vector3();
-            box.getSize(size);
-            modelSizeRef.current = Math.max(size.x, size.y, size.z);
-            
-            setModelCentered(true);
-          }
-        }, 300);
-      }
-    };
-    
-    window.addEventListener('orientationchange', handleOrientationChange);
-    
-    return () => {
-      window.removeEventListener('orientationchange', handleOrientationChange);
-    };
-  }, [modelViewer]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (isDragging || isFollowingMouse) {
-          setIsDragging(false);
-          setIsFollowingMouse(false);
-          setDraggedPoint(null);
-          setSelectedMeasurementId(null);
-          setSelectedPointIndex(null);
-          document.body.style.cursor = 'auto';
-          
-          toast({
-            title: "Bearbeitung abgebrochen",
-            description: "Die Punktmanipulation wurde abgebrochen.",
-            duration: 3000,
-          });
-        }
-        
-        if (modelViewer.activeTool !== 'none') {
-          modelViewer.setActiveTool('none');
-        }
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isDragging, isFollowingMouse, modelViewer, toast]);
-
-  useEffect(() => {
-    if (modelViewer.loadedModel) {
-      const box = new THREE.Box3().setFromObject(modelViewer.loadedModel);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      modelSizeRef.current = Math.max(size.x, size.y, size.z);
-      console.log("Model size calculated for adaptive zoom:", modelSizeRef.current);
-    }
-  }, [modelViewer.loadedModel]);
-
-  return (
-    <div className="relative h-full w-full flex flex-col">
-      <ViewerToolbar 
-        isFullscreen={isFullscreen}
-        loadedModel={!!modelViewer.loadedModel}
-        showMeasurementTools={showMeasurementTools}
-        onReset={handleResetView}
-        onFullscreen={toggleFullscreen}
-        toggleMeasurementTools={toggleMeasurementTools}
-        onNewProject={handleNewProject}
-        onTakeScreenshot={handleTakeScreenshot}
-        onExportMeasurements={handleExportMeasurements}
-        isMobile={isMobile}
-        forceHideHeader={!showHeader}
-      />
-      
-      <ViewerContainer
-        ref={containerRef}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        {modelViewer.isLoading && (
-          <LoadingOverlay progress={modelViewer.progress} />
-        )}
-        
-        {!modelViewer.loadedModel && !modelViewer.isLoading && (
-          <DropZone 
-            onFileSelected={handleFileSelected}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          />
-        )}
-        
-        {isMobile && modelViewer.loadedModel && (
-          <TouchControlsPanel 
-            activeMode={touchMode}
-            onModeChange={handleTouchModeChange}
-          />
-        )}
-      </ViewerContainer>
-      
-      {modelViewer.loadedModel && showMeasurementTools && (
-        <MeasurementToolsPanel
-          measurements={modelViewer.measurements}
-          activeTool={modelViewer.activeTool}
-          onToolChange={handleToolChange}
-          onClearMeasurements={modelViewer.clearMeasurements}
-          onDeleteMeasurement={modelViewer.deleteMeasurement}
-          onUndoLastPoint={modelViewer.undoLastPoint}
-          onUpdateMeasurement={modelViewer.updateMeasurement}
-          onToggleMeasurementVisibility={toggleSingleMeasurementVisibility}
-          onToggleAllMeasurementsVisibility={toggleMeasurementsVisibility}
-          onToggleEditMode={toggleEditMode}
-          allMeasurementsVisible={measurementsVisible}
-          canUndo={modelViewer.canUndo}
-          screenshots={savedScreenshots}
-          isMobile={isMobile}
-          isFullscreen={isFullscreen}
-          onNewProject={handleNewProject}
-          onTakeScreenshot={handleTakeScreenshot}
-          tempPoints={modelViewer.tempPoints || []}
-          onDeleteTempPoint={(index) => modelViewer.deleteTempPoint(index)}
-          onDeleteSinglePoint={(measurementId, pointIndex) => modelViewer.deleteSinglePoint(measurementId, pointIndex)}
-        />
-      )}
-      
-      {modelViewer.error && (
-        <div className="absolute bottom-4 left-4 right-4 bg-destructive text-destructive-foreground p-4 rounded-md">
-          <p>{modelViewer.error}</p>
-        </div>
-      )}
-      
-      <ScreenshotDialog
-        imageDataUrl={screenshotData}
-        open={showScreenshotDialog}
-        onClose={() => setShowScreenshotDialog(false)}
-        onSave={handleSaveScreenshot}
-      />
-    </div>
-  );
-};
-
-export default ModelViewer;

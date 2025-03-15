@@ -24,6 +24,7 @@ interface MeasurementToolsPanelProps {
   screenshots: { id: string, imageDataUrl: string, description: string }[];
   isMobile: boolean;
   isFullscreen: boolean;
+  hasMouse: boolean;
   onNewProject: () => void;
   onTakeScreenshot: () => void;
   tempPoints: MeasurementPoint[];
@@ -47,12 +48,18 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
   screenshots,
   isMobile,
   isFullscreen,
+  hasMouse,
   onNewProject,
   onTakeScreenshot,
   tempPoints,
   onDeleteTempPoint,
   onDeleteSinglePoint
 }) => {
+  // If it's a touch device without a mouse, and in portrait mode, don't show measurement tools at all
+  if (isMobile && !hasMouse && window.innerHeight > window.innerWidth) {
+    return null;
+  }
+
   const totalLength = measurements
     .filter(m => m.type === 'length' && m.value && m.visible)
     .reduce((sum, m) => sum + m.value, 0);
@@ -136,26 +143,28 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
             </Button>
           </div>
           
-          <MeasurementTools
-            activeTool={activeTool}
-            onToolChange={onToolChange}
-            onClearMeasurements={onClearMeasurements}
-            onDeleteMeasurement={onDeleteMeasurement}
-            onUndoLastPoint={onUndoLastPoint}
-            onUpdateMeasurement={onUpdateMeasurement}
-            onToggleMeasurementVisibility={onToggleMeasurementVisibility}
-            onToggleAllMeasurementsVisibility={onToggleAllMeasurementsVisibility}
-            onToggleEditMode={onToggleEditMode}
-            allMeasurementsVisible={allMeasurementsVisible}
-            measurements={measurements}
-            canUndo={canUndo}
-            screenshots={screenshots}
-            isMobile={isMobile}
-            scrollThreshold={3}
-            tempPoints={tempPoints}
-            onDeleteTempPoint={onDeleteTempPoint}
-            onDeleteSinglePoint={onDeleteSinglePoint}
-          />
+          {hasMouse && (
+            <MeasurementTools
+              activeTool={activeTool}
+              onToolChange={onToolChange}
+              onClearMeasurements={onClearMeasurements}
+              onDeleteMeasurement={onDeleteMeasurement}
+              onUndoLastPoint={onUndoLastPoint}
+              onUpdateMeasurement={onUpdateMeasurement}
+              onToggleMeasurementVisibility={onToggleMeasurementVisibility}
+              onToggleAllMeasurementsVisibility={onToggleAllMeasurementsVisibility}
+              onToggleEditMode={onToggleEditMode}
+              allMeasurementsVisible={allMeasurementsVisible}
+              measurements={measurements}
+              canUndo={canUndo}
+              screenshots={screenshots}
+              isMobile={isMobile}
+              scrollThreshold={3}
+              tempPoints={tempPoints}
+              onDeleteTempPoint={onDeleteTempPoint}
+              onDeleteSinglePoint={onDeleteSinglePoint}
+            />
+          )}
         </div>
       </div>
     );
@@ -202,28 +211,30 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
             </Button>
           </div>
           
-          <ScrollArea className="h-[calc(100vh-380px)]">
-            <MeasurementTools
-              activeTool={activeTool}
-              onToolChange={onToolChange}
-              onClearMeasurements={onClearMeasurements}
-              onDeleteMeasurement={onDeleteMeasurement}
-              onUndoLastPoint={onUndoLastPoint}
-              onUpdateMeasurement={onUpdateMeasurement}
-              onToggleMeasurementVisibility={onToggleMeasurementVisibility}
-              onToggleAllMeasurementsVisibility={onToggleAllMeasurementsVisibility}
-              onToggleEditMode={onToggleEditMode}
-              allMeasurementsVisible={allMeasurementsVisible}
-              measurements={measurements}
-              canUndo={canUndo}
-              screenshots={screenshots}
-              isMobile={isMobile}
-              scrollThreshold={5}
-              tempPoints={tempPoints}
-              onDeleteTempPoint={onDeleteTempPoint}
-              onDeleteSinglePoint={onDeleteSinglePoint}
-            />
-          </ScrollArea>
+          {hasMouse && (
+            <ScrollArea className="h-[calc(100vh-380px)]">
+              <MeasurementTools
+                activeTool={activeTool}
+                onToolChange={onToolChange}
+                onClearMeasurements={onClearMeasurements}
+                onDeleteMeasurement={onDeleteMeasurement}
+                onUndoLastPoint={onUndoLastPoint}
+                onUpdateMeasurement={onUpdateMeasurement}
+                onToggleMeasurementVisibility={onToggleMeasurementVisibility}
+                onToggleAllMeasurementsVisibility={onToggleAllMeasurementsVisibility}
+                onToggleEditMode={onToggleEditMode}
+                allMeasurementsVisible={allMeasurementsVisible}
+                measurements={measurements}
+                canUndo={canUndo}
+                screenshots={screenshots}
+                isMobile={isMobile}
+                scrollThreshold={5}
+                tempPoints={tempPoints}
+                onDeleteTempPoint={onDeleteTempPoint}
+                onDeleteSinglePoint={onDeleteSinglePoint}
+              />
+            </ScrollArea>
+          )}
         </SidebarContent>
         
         <SidebarFooter className="p-4 border-t border-zinc-200 mt-auto">

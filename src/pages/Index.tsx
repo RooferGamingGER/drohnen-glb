@@ -3,7 +3,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import ModelViewer from '@/components/ModelViewer';
 
 const Index = () => {
-  const { isPortrait } = useIsMobile();
+  const { isPortrait, hasMouse, isTouchDevice } = useIsMobile();
   
   return (
     <div className="h-full w-full flex items-center justify-center overflow-hidden">
