@@ -10,12 +10,12 @@ interface ViewerContainerProps {
 
 const ViewerContainer = forwardRef<HTMLDivElement, ViewerContainerProps>(
   ({ children, onDragOver, onDrop }, ref) => {
-    const { isPortrait } = useIsMobile();
+    const { isPortrait, isTouchDevice } = useIsMobile();
     
     return (
       <div 
         ref={ref}
-        className="relative h-full w-full"
+        className={`relative h-full w-full ${isTouchDevice ? 'touch-manipulation' : ''}`}
         onDragOver={onDragOver}
         onDrop={onDrop}
       >

@@ -52,10 +52,23 @@ export const useThreeScene = ({
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
-    controls.rotateSpeed = isTouchDevice ? 0.5 : 0.7;
-    controls.zoomSpeed = 1.2;
-    controls.panSpeed = 0.8;
-    controls.screenSpacePanning = true;
+    
+    // Configure differently for touch vs desktop
+    if (isTouchDevice) {
+      controls.enableRotate = false; // Will be handled by Hammer.js
+      controls.enablePan = false;    // Will be handled by Hammer.js
+      controls.enableZoom = false;   // Will be handled by Hammer.js
+      controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+      };
+    } else {
+      controls.rotateSpeed = 0.7;
+      controls.zoomSpeed = 1.2;
+      controls.panSpeed = 0.8;
+      controls.screenSpacePanning = true;
+    }
+    
     controls.update();
     controlsRef.current = controls;
     
