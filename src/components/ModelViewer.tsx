@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useModelViewer } from '@/hooks/useModelViewer';
@@ -55,11 +54,10 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   
   const [isRightMouseDown, setIsRightMouseDown] = useState(false);
   const rightMousePreviousPosition = useRef<{x: number, y: number} | null>(null);
-  
+
   const shouldShowHeader = useCallback(() => {
     if (forceHideHeader) return false;
     
-    // Don't show header in portrait mode on touch devices
     if (isPortrait && isTouchDevice) return false;
     
     return !showMeasurementTools;
@@ -72,7 +70,6 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   }, [shouldShowHeader, showMeasurementTools, isPortrait]);
   
   useEffect(() => {
-    // Show measurement tools in non-portrait mode or if a mouse is connected
     if ((!isPortrait || hasMouse) && !showMeasurementTools) {
       setShowMeasurementTools(true);
     }
@@ -126,18 +123,6 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
     }
   }, [modelViewer, toast]);
 
-  useEffect(() => {
-    if (modelViewer.loadedModel && modelViewer.camera && modelViewer.controls && !modelCentered) {
-      console.log("Erstes Zentrieren nach Modellladung");
-      optimallyCenterModel(
-        modelViewer.loadedModel,
-        modelViewer.camera,
-        modelViewer.controls
-      );
-      setModelCentered(true);
-    }
-  }, [modelViewer.loadedModel, modelViewer.camera, modelViewer.controls, modelCentered]);
-
   const handleDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -178,7 +163,6 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   }, [modelViewer]);
 
   const handleToolChange = useCallback((tool: any) => {
-    // Only allow tool selection when mouse is available
     if (!hasMouse && isTouchDevice) {
       toast({
         title: "Maus erforderlich",
@@ -403,7 +387,6 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   }, [modelViewer, toast, isDragging, isFollowingMouse]);
 
   const modelSizeRef = useRef<number>(0);
-  
   const touchStartRef = useRef<{x1: number, y1: number, x2?: number, y2?: number, distance?: number} | null>(null);
   
   const handleMouseMove = useCallback((event: MouseEvent) => {
@@ -740,12 +723,10 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
     setTouchMode(mode);
 
     if (modelViewer.controls) {
-      // Disable any active measurement tools when switching touch modes
       if (modelViewer.activeTool !== 'none') {
         modelViewer.setActiveTool('none');
       }
 
-      // Configure OrbitControls based on the selected mode
       modelViewer.controls.enableRotate = mode === 'rotate';
       modelViewer.controls.enablePan = mode === 'pan';
       modelViewer.controls.enableZoom = mode === 'zoom';
@@ -839,14 +820,11 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   useEffect(() => {
     if (!modelViewer.controls) return;
     
-    // Configure default control behavior based on device type
     if (isTouchDevice && !hasMouse) {
-      // For touch-only devices, disable all controls by default
       modelViewer.controls.enableRotate = false;
       modelViewer.controls.enablePan = false;
       modelViewer.controls.enableZoom = false;
       
-      // Only enable specific controls based on selected mode
       switch (touchMode) {
         case 'rotate':
           modelViewer.controls.enableRotate = true;
@@ -859,13 +837,11 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
           break;
       }
     } else {
-      // For mouse devices, enable standard controls
       modelViewer.controls.enableRotate = true;
       modelViewer.controls.enableZoom = true;
       modelViewer.controls.enablePan = true;
     }
     
-    // Configure touch handling
     if (modelViewer.controls.enabled) {
       modelViewer.controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
@@ -938,58 +914,78 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
       {modelViewer.isLoading && <LoadingOverlay progress={modelViewer.progress} />}
       
       {!modelViewer.loadedModel && !modelViewer.isLoading && (
-        <DropZone onFileSelected={handleFileSelected} />
-      )}
-      
-      {/* Three.js scene container */}
-      <ViewerContainer />
-      
-      {/* Header toolbar */}
-      {!forceHideHeader && showHeader && (
-        <ViewerToolbar 
-          onResetView={handleResetView}
-          onNewProject={handleNewProject}
-          onToggleFullscreen={toggleFullscreen}
-          isFullscreen={isFullscreen}
-          onTakeScreenshot={handleTakeScreenshot}
-          onExport={handleExportMeasurements}
-          onToggleMeasurementTools={toggleMeasurementTools}
-          showMeasurementTools={showMeasurementTools}
-          onToggleMeasurementsVisibility={toggleMeasurementsVisibility}
-          measurementsVisible={measurementsVisible}
+        <DropZone 
+          onFileSelected={handleFileSelected} 
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         />
       )}
       
-      {/* Measurement tools panel */}
+      <ViewerContainer 
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        ref={containerRef}
+      >
+        {/* Three.js scene container */}
+      </ViewerContainer>
+      
+      {!forceHideHeader && showHeader && (
+        <ViewerToolbar 
+          isFullscreen={isFullscreen}
+          loadedModel={!!modelViewer.loadedModel}
+          showMeasurementTools={showMeasurementTools}
+          onReset={handleResetView}
+          onFullscreen={toggleFullscreen}
+          toggleMeasurementTools={toggleMeasurementTools}
+          onNewProject={handleNewProject}
+          onTakeScreenshot={handleTakeScreenshot}
+          onExportMeasurements={handleExportMeasurements}
+          isMobile={isMobile}
+          forceHideHeader={forceHideHeader}
+        />
+      )}
+      
       {showMeasurementTools && modelViewer.loadedModel && (
         <MeasurementToolsPanel 
           activeTool={modelViewer.activeTool}
           onToolChange={handleToolChange}
           measurements={modelViewer.measurements}
           onDeleteMeasurement={modelViewer.deleteMeasurement}
-          onToggleVisibility={toggleSingleMeasurementVisibility}
+          onToggleMeasurementVisibility={toggleSingleMeasurementVisibility}
           onToggleEditMode={toggleEditMode}
           canUndo={modelViewer.canUndo}
           onUndo={modelViewer.undoLastPoint}
           hasMouse={hasMouse}
           isTouchDevice={isTouchDevice}
+          onClearMeasurements={() => modelViewer.clearMeasurements()}
+          onUpdateMeasurement={(id, data) => modelViewer.updateMeasurement(id, data)}
+          onToggleAllMeasurementsVisibility={toggleMeasurementsVisibility}
+          allMeasurementsVisible={measurementsVisible}
+          screenshots={savedScreenshots}
+          isMobile={isMobile}
+          isFullscreen={isFullscreen}
+          onNewProject={handleNewProject}
+          onTakeScreenshot={handleTakeScreenshot}
+          tempPoints={[]}
+          onDeleteTempPoint={() => {}}
+          onDeleteSinglePoint={() => {}}
         />
       )}
       
-      {/* Touch controls for touch-only devices */}
       {(isTouchDevice && !hasMouse) && modelViewer.loadedModel && (
         <TouchControlsPanel
           activeMode={touchMode}
           onModeChange={handleTouchModeChange}
+          isTouchDevice={isTouchDevice}
           isMobile={isMobile}
           isPortrait={isPortrait}
         />
       )}
       
-      {/* Screenshot dialog */}
       {showScreenshotDialog && screenshotData && (
         <ScreenshotDialog
-          imageData={screenshotData}
+          imageDataUrl={screenshotData}
+          open={showScreenshotDialog}
           onClose={() => setShowScreenshotDialog(false)}
           onSave={handleSaveScreenshot}
         />

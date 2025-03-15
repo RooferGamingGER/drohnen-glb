@@ -8,12 +8,16 @@ interface TouchControlsPanelProps {
   activeMode: TouchControlMode;
   onModeChange: (mode: TouchControlMode) => void;
   isTouchDevice: boolean;
+  isMobile?: boolean;
+  isPortrait?: boolean;
 }
 
 const TouchControlsPanel: React.FC<TouchControlsPanelProps> = ({ 
   activeMode, 
   onModeChange,
-  isTouchDevice
+  isTouchDevice,
+  isMobile,
+  isPortrait
 }) => {
   if (!isTouchDevice) {
     return null;
