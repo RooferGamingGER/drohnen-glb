@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useIsMobile } from './use-mobile';
 import { useHammerTouch } from './useHammerTouch';
 import * as THREE from 'three';
@@ -21,7 +21,8 @@ export const useTouch = ({
   activeTool,
   modelRef
 }: UseTouchProps) => {
-  const { isTouchDevice } = useIsMobile();
+  const { isTouchDevice, hasMouseAttached } = useIsMobile();
+  const [isInTouchMode, setIsInTouchMode] = useState<boolean>(false);
   
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
@@ -29,7 +30,13 @@ export const useTouch = ({
   const selectedPointRef = useRef<{id: string, index: number} | null>(null);
   const tapCooldownRef = useRef<boolean>(false);
   
-  // Initialize Hammer touch controls for touch devices
+  // Aktualisieren des Touch-Modus-Status basierend auf Geräteerkennung
+  useEffect(() => {
+    setIsInTouchMode(isTouchDevice && !hasMouseAttached);
+    console.log(`Touch mode in useTouch: ${isTouchDevice && !hasMouseAttached ? 'ENABLED' : 'DISABLED'}`);
+  }, [isTouchDevice, hasMouseAttached]);
+  
+  // Initialisiere Hammer.js Touch-Steuerungen für Touch-Geräte
   const hammerControls = useHammerTouch({
     containerRef,
     cameraRef,
@@ -38,92 +45,111 @@ export const useTouch = ({
     onTap: (point) => {
       if (tapCooldownRef.current) return;
       
-      // Set cooldown to prevent accidental multiple taps
+      // Cooldown setzen, um versehentliche mehrfache Taps zu verhindern
       tapCooldownRef.current = true;
       setTimeout(() => {
         tapCooldownRef.current = false;
       }, 500);
       
       if (activeTool !== 'none' && onTouchPoint) {
-        console.log("Touch tap registered with activeTool:", activeTool);
+        console.log("Touch tap registriert mit activeTool:", activeTool);
         onTouchPoint(point);
       }
     }
   });
   
-  // Traditional mouse handling for desktop
-  useEffect(() => {
-    if (!containerRef.current || isTouchDevice) return;
+  // Verarbeitung von Maus-Klicks für Desktop
+  const handleMouseClick = useCallback((event: MouseEvent) => {
+    if (!modelRef.current || !cameraRef.current || !containerRef.current) return;
+    if (isInTouchMode) return; // Ignoriere bei Touch-Geräten
     
-    const handleMouseDown = (event: MouseEvent) => {
-      if (!modelRef.current || !cameraRef.current) return;
-      
-      // Right-click handling for panning
-      if (event.button === 2) {
-        event.preventDefault();
-        if (controlsRef.current) {
-          controlsRef.current.enablePan = true;
-        }
-      }
-      
-      // Left-click handling for model interaction
-      if (event.button === 0 && activeTool !== 'none' && onTouchPoint) {
-        const rect = containerRef.current!.getBoundingClientRect();
-        mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
-        raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
-        const intersects = raycasterRef.current.intersectObject(modelRef.current, true);
-        
-        if (intersects.length > 0) {
-          onTouchPoint(intersects[0].point);
-        }
-      }
-    };
-    
-    const handleMouseUp = (event: MouseEvent) => {
-      if (event.button === 2 && controlsRef.current) {
-        controlsRef.current.enablePan = false;
-      }
-    };
-    
-    const handleContextMenu = (event: MouseEvent) => {
+    // Rechtsklick-Behandlung für Panning
+    if (event.button === 2) {
       event.preventDefault();
-    };
-    
-    containerRef.current.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
-    containerRef.current.addEventListener('contextmenu', handleContextMenu);
-    
-    return () => {
-      containerRef.current?.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-      containerRef.current?.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, [containerRef.current, cameraRef.current, modelRef.current, activeTool, isTouchDevice, onTouchPoint]);
-  
-  // Configure orbit controls based on device type
-  useEffect(() => {
-    if (!controlsRef.current) return;
-    
-    if (isTouchDevice) {
-      // For touch devices, disable default OrbitControls behavior
-      // and let Hammer.js handle the interactions
-      controlsRef.current.enableRotate = false;
-      controlsRef.current.enablePan = false;
-      controlsRef.current.enableZoom = false;
-    } else {
-      // For desktop, use traditional OrbitControls
-      controlsRef.current.enableRotate = true;
-      controlsRef.current.enableZoom = true;
-      controlsRef.current.enablePan = false; // Only enable pan on right click
+      if (controlsRef.current) {
+        controlsRef.current.enablePan = true;
+      }
+      return;
     }
     
-    controlsRef.current.update();
-  }, [isTouchDevice, controlsRef.current]);
+    // Linksklick-Behandlung für Modell-Interaktion
+    if (event.button === 0 && activeTool !== 'none' && onTouchPoint) {
+      const rect = containerRef.current.getBoundingClientRect();
+      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      
+      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+      const intersects = raycasterRef.current.intersectObject(modelRef.current, true);
+      
+      if (intersects.length > 0) {
+        onTouchPoint(intersects[0].point);
+      }
+    }
+  }, [modelRef, cameraRef, containerRef, controlsRef, activeTool, onTouchPoint, isInTouchMode]);
+  
+  // Einrichtung von Event-Listenern basierend auf dem Gerätemodus
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    // Verarbeitung von Maus-Events nur auf Desktop
+    if (!isInTouchMode) {
+      console.log("Maussteuerung aktiviert");
+      
+      const handleMouseDown = (event: MouseEvent) => {
+        handleMouseClick(event);
+      };
+      
+      const handleMouseUp = (event: MouseEvent) => {
+        if (event.button === 2 && controlsRef.current) {
+          controlsRef.current.enablePan = false;
+        }
+      };
+      
+      const handleContextMenu = (event: MouseEvent) => {
+        event.preventDefault();
+      };
+      
+      containerRef.current.addEventListener('mousedown', handleMouseDown);
+      window.addEventListener('mouseup', handleMouseUp);
+      containerRef.current.addEventListener('contextmenu', handleContextMenu);
+      
+      // Konfiguriere OrbitControls für Desktop
+      if (controlsRef.current) {
+        controlsRef.current.enableRotate = true;
+        controlsRef.current.enablePan = false; // Nur bei rechter Maustaste aktivieren
+        controlsRef.current.enableZoom = true;
+        controlsRef.current.update();
+      }
+      
+      return () => {
+        containerRef.current?.removeEventListener('mousedown', handleMouseDown);
+        window.removeEventListener('mouseup', handleMouseUp);
+        containerRef.current?.removeEventListener('contextmenu', handleContextMenu);
+      };
+    } else {
+      console.log("Touch-Steuerung aktiviert");
+      
+      // Konfiguriere OrbitControls für Touch-Geräte
+      if (controlsRef.current) {
+        controlsRef.current.enableRotate = false; // Von Hammer.js übernommen
+        controlsRef.current.enablePan = false;    // Von Hammer.js übernommen
+        controlsRef.current.enableZoom = false;   // Von Hammer.js übernommen
+        controlsRef.current.update();
+      }
+    }
+  }, [
+    containerRef.current, 
+    cameraRef.current, 
+    controlsRef.current, 
+    modelRef.current, 
+    activeTool, 
+    isInTouchMode, 
+    handleMouseClick
+  ]);
   
   return {
     isTouchDevice,
-    isTouchControlsActive: hammerControls.isTouchControlsActive
+    isTouchControlsActive: hammerControls.isTouchControlsActive,
+    isInTouchMode
   };
 };

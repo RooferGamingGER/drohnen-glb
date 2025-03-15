@@ -48,7 +48,7 @@ input[type="file"] {
   cursor: pointer;
 }
 
-/* Touch-specific CSS improvements */
+/* Verbesserte Touch-spezifische CSS-Verbesserungen */
 .touch-none {
   touch-action: none !important;
   -webkit-touch-callout: none !important;
@@ -62,6 +62,10 @@ input[type="file"] {
   touch-action: manipulation !important;
 }
 
+.touch-auto {
+  touch-action: auto !important;
+}
+
 .touch-target {
   min-height: 44px !important;
   min-width: 44px !important;
@@ -73,18 +77,52 @@ html, body {
   width: 100%;
   overflow: hidden;
   position: fixed;
-  touch-action: manipulation;
   -webkit-overflow-scrolling: touch;
 }
 
 /* Ensure buttons are easily tappable on touch devices */
-button {
+button, 
+[role="button"],
+.clickable {
   min-height: 44px;
   min-width: 44px;
   touch-action: manipulation;
 }
 
-/* For portrait mode adjustments */
+/* Erweiterte Medien-Querys für Touch-Geräte */
+@media (hover: none) {
+  /* Touch-Geräte ohne Hover */
+  .file-upload-zone {
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+  }
+  
+  /* Vergrößerte Touch-Targets */
+  button, 
+  [role="button"],
+  .clickable,
+  a {
+    cursor: pointer !important;
+    touch-action: manipulation !important;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  /* Feedback bei Touch */
+  .touch-feedback:active {
+    transform: scale(0.97);
+    transition: transform 0.1s;
+  }
+}
+
+/* Fix for vertical centering in different views */
+.vertical-center {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Orientation-specific layouts */
 @media (max-height: 500px) {
   .portrait-mode {
     transform: scale(0.9);
@@ -107,14 +145,6 @@ button {
     cursor: pointer !important;
     touch-action: manipulation !important;
   }
-}
-
-/* Fix for vertical centering in different views */
-.vertical-center {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
 }
 
 /* Ensure content is properly displayed in portrait mode */
@@ -158,7 +188,7 @@ button {
 }
 
 .dark .touch-controls-help {
-  background-color: rgba(30, 30, 30, 0.9);
+  background-color: rgba(30, 30, 30, 0.95);
 }
 
 .touch-gesture-icon {
@@ -176,7 +206,7 @@ button {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Touch feedback enhancements */
+/* Erweiterte Touch-Feedback-Verbesserungen */
 @media (hover: none) {
   .touch-feedback:active {
     transform: scale(0.98);
@@ -221,4 +251,26 @@ button {
       transform: scale(40, 40);
     }
   }
+  
+  /* Optimizied tapping */
+  .tap-improve {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Fix for views that shift on virtual keyboard appearance */
+  .virtual-keyboard-fix {
+    height: 100%;
+    position: fixed;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Highlight active gesture */
+.gesture-active {
+  background-color: rgba(59, 130, 246, 0.2);
+  transform: scale(1.05);
+  transition: all 0.3s ease;
 }

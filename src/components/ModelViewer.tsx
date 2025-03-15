@@ -4,6 +4,7 @@ import { useModelViewer } from '@/hooks/useModelViewer';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useTouch } from '@/hooks/use-touch';
 import { 
   captureScreenshot, 
   exportMeasurementsToPDF, 
@@ -53,6 +54,8 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   
   const [isRightMouseDown, setIsRightMouseDown] = useState(false);
   const rightMousePreviousPosition = useRef<{x: number, y: number} | null>(null);
+  
+  const [lastTouchGesture, setLastTouchGesture] = useState<string>('none');
   
   const shouldShowHeader = useCallback(() => {
     if (forceHideHeader) return false;
@@ -590,6 +593,31 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
     }
   }, []);
 
+  const touchControls = useTouch({
+    containerRef,
+    cameraRef: modelViewer.camera,
+    controlsRef: modelViewer.controls,
+    onTouchPoint: (point) => {
+      if (modelViewer.activeTool !== 'none') {
+        console.log("Touch tap registered with activeTool:", modelViewer.activeTool);
+        const worldPoint = point.clone();
+        modelViewer.setProgress(100);
+                
+        if (modelViewer.activeTool !== 'none' && modelViewer.activeTool !== 'select') {
+          modelViewer.addMeasurementPoint(point);
+        }
+      }
+    },
+    activeTool: modelViewer.activeTool,
+    modelRef: {current: modelViewer.loadedModel}
+  });
+
+  useEffect(() => {
+    if (touchControls.lastGestureType && touchControls.lastGestureType !== 'none') {
+      setLastTouchGesture(touchControls.lastGestureType);
+    }
+  }, [touchControls.lastGestureType]);
+
   useEffect(() => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mousedown', handleMouseDown);
@@ -725,7 +753,7 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
         )}
         
         {isTouchDevice && modelViewer.loadedModel && (
-          <TouchControlsPanel />
+          <TouchControlsPanel lastGestureType={lastTouchGesture} />
         )}
       </ViewerContainer>
       
