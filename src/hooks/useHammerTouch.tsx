@@ -28,11 +28,9 @@ export const useHammerTouch = ({
   const tapCooldownRef = useRef<boolean>(false);
   const touchModeRef = useRef<boolean>(false);
   
-  // Status-Tracking
   const [isTouchControlsActive, setIsTouchControlsActive] = useState(false);
   const [lastGestureType, setLastGestureType] = useState<string>('none');
   
-  // Utility function to update model size for adaptive gestures
   const updateModelSize = useCallback(() => {
     if (modelRef.current) {
       const box = new THREE.Box3().setFromObject(modelRef.current);
@@ -42,29 +40,24 @@ export const useHammerTouch = ({
     }
   }, [modelRef]);
   
-  // Update model size when model changes
   useEffect(() => {
     updateModelSize();
   }, [modelRef.current, updateModelSize]);
   
-  // Provide haptic feedback on supported devices
   const vibrate = useCallback((pattern: number | number[]) => {
     if (navigator.vibrate) {
       navigator.vibrate(pattern);
     }
   }, []);
   
-  // Determine if touch mode should be used (touch device without mouse)
   useEffect(() => {
     touchModeRef.current = isTouchDevice && !hasMouseAttached;
     console.log(`Touch mode: ${touchModeRef.current ? 'ENABLED' : 'DISABLED'}`);
   }, [isTouchDevice, hasMouseAttached]);
   
-  // Hammer.js gesture handler setup
   useEffect(() => {
     if (!containerRef.current) return;
     
-    // Only set up touch controls if we're in touch mode
     const touchMode = touchModeRef.current;
     if (!touchMode) {
       console.log("Touch controls not initialized - not in touch mode");
@@ -74,16 +67,14 @@ export const useHammerTouch = ({
     
     console.log("Initializing Hammer.js touch controls");
     
-    // Clean up any existing Hammer instance
     if (hammerRef.current) {
       hammerRef.current.destroy();
       hammerRef.current = null;
     }
     
     try {
-      // Create new Hammer manager with optimized settings
       const hammer = new Hammer(containerRef.current, {
-        inputClass: Hammer.TouchInput, // Explizit nur Touch-Events erfassen
+        inputClass: Hammer.TouchInput,
         touchAction: 'none',
         cssProps: {
           contentZooming: 'none',
@@ -91,11 +82,9 @@ export const useHammerTouch = ({
           touchCallout: 'none',
           userDrag: 'none',
           userSelect: 'none'
-          // touchSelect wurde entfernt, da es nicht in CssProps Typ existiert
         }
       });
       
-      // Configure recognizers with better thresholds and settings
       const pinch = new Hammer.Pinch();
       const rotate = new Hammer.Rotate();
       const pan = new Hammer.Pan({
@@ -120,16 +109,13 @@ export const useHammerTouch = ({
         time: 500
       });
       
-      // Add all recognizers
       hammer.add([pan, pinch, rotate, press, doubleTap, tap]);
       
-      // Set up recognizer relations to reduce conflicts
       doubleTap.recognizeWith(tap);
       pan.recognizeWith(pinch);
       pan.recognizeWith(rotate);
       pinch.recognizeWith(rotate);
       
-      // Set recognizers that must fail before others can be recognized
       tap.requireFailure(doubleTap);
       tap.requireFailure(press);
       tap.requireFailure(pan);
@@ -138,177 +124,110 @@ export const useHammerTouch = ({
       
       hammer.on('singletap doubletap press panstart panmove panend pinchstart pinchmove pinchend rotatestart rotatemove rotateend', 
         (event) => {
-          // Log gesture für Debug-Zwecke
           console.log(`Touch gesture: ${event.type}`);
           setLastGestureType(event.type);
-          
-          // Event-Prävention für alle Gesten-Events
           event.preventDefault && event.preventDefault();
-          
-          // Aktualisiere aktiven Status
           setIsTouchControlsActive(true);
         });
       
-      // === PAN (DRAG) FÜR ROTATION UND VERSCHIEBUNG ===
       hammer.on('panstart', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
-        // Ignoriere während Cooldown
         if (tapCooldownRef.current) return;
-        
         console.log(`Pan gestartet mit ${event.pointers.length} Fingern`);
-        
-        // Laufende Tap-Operationen abbrechen
         isTappingRef.current = false;
-        
-        vibrate(10); // Kurzes Feedback
+        vibrate(10);
       });
       
       hammer.on('panmove', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
         if (!controlsRef.current || !cameraRef.current || tapCooldownRef.current) return;
-        
         const deltaX = event.deltaX * 0.005;
         const deltaY = event.deltaY * 0.005;
-        
-        // Ein Finger: Rotation (vereinfacht für Benutzer)
         if (event.pointers.length === 1) {
           controlsRef.current.rotateLeft(deltaX * 0.5);
           controlsRef.current.rotateUp(deltaY * 0.5);
-        } 
-        // Zwei Finger: Verschiebung (Pan)
-        else if (event.pointers.length === 2) {
+        } else if (event.pointers.length === 2) {
           const adaptiveFactor = Math.max(0.1, modelSizeRef.current * 0.0005);
           controlsRef.current.pan(-event.deltaX * adaptiveFactor, event.deltaY * adaptiveFactor);
         }
-        
         controlsRef.current.update();
       });
       
-      // === ROTATE GESTE ===
       hammer.on('rotatemove', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
         if (!controlsRef.current || !cameraRef.current) return;
-        
-        // Optimierte Rotation mit besserer Empfindlichkeit
         const rotationFactor = 0.008;
         controlsRef.current.rotateLeft(event.rotation * rotationFactor);
         controlsRef.current.update();
       });
       
-      // === PINCH FÜR ZOOM ===
       hammer.on('pinchstart', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
         initialPinchDistanceRef.current = event.scale;
         console.log("Pinch gestartet:", event.scale);
-        
-        // Laufende Tap-Operationen abbrechen
         isTappingRef.current = false;
       });
       
       hammer.on('pinchmove', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
         if (!controlsRef.current || !cameraRef.current) return;
-        
         const scaleDelta = event.scale - initialPinchDistanceRef.current;
         initialPinchDistanceRef.current = event.scale;
-        
         const zoomDirection = scaleDelta > 0 ? -1 : 1;
         const zoomIntensity = Math.abs(scaleDelta) * 10;
-        
-        // Adaptive Zoom-Geschwindigkeit basierend auf Modellgröße
         const adaptiveFactor = Math.max(0.1, modelSizeRef.current * 0.05);
         const zoomSpeed = adaptiveFactor * 0.025;
-        
         controlsRef.current.dollyIn(1 + (zoomDirection * zoomIntensity * zoomSpeed));
         controlsRef.current.update();
       });
       
-      // === TAP FÜR PUNKT-PLATZIERUNG ===
       hammer.on('singletap', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
         const currentTime = Date.now();
         const timeSinceLastTap = currentTime - lastTapTimeRef.current;
-        
-        // Cooldown für Taps (500ms)
         if (timeSinceLastTap < 500 || tapCooldownRef.current) {
           console.log("Tap ignoriert - innerhalb der Cooldown-Zeit");
           return;
         }
-        
-        // Setze Cooldown und Zeitmessung
         lastTapTimeRef.current = currentTime;
         tapCooldownRef.current = true;
-        
         console.log("Tap erkannt");
-        vibrate(20); // Kurzes Feedback
-        
-        // Nur verarbeiten, wenn alle Voraussetzungen erfüllt sind
+        vibrate(20);
         if (!modelRef.current || !containerRef.current || !cameraRef.current || !onTap) {
           tapCooldownRef.current = false;
           return;
         }
-        
-        // Berechne Tap-Position
         const rect = containerRef.current.getBoundingClientRect();
         const x = ((event.center.x - rect.left) / rect.width) * 2 - 1;
         const y = -((event.center.y - rect.top) / rect.height) * 2 + 1;
-        
         const mousePosition = new THREE.Vector2(x, y);
-        
-        // Raycast zur Ermittlung des Schnittpunkts mit dem Modell
         raycasterRef.current.setFromCamera(mousePosition, cameraRef.current);
         const intersects = raycasterRef.current.intersectObject(modelRef.current, true);
-        
         if (intersects.length > 0) {
           const point = intersects[0].point;
-          vibrate(50); // Stärkeres Feedback bei Erfolg
-          
-          // Callback mit Trefferpunkt aufrufen
+          vibrate(50);
           onTap(point);
         } else {
-          vibrate([20, 30, 20]); // Feedback bei Fehlschlag
+          vibrate([20, 30, 20]);
         }
-        
-        // Cooldown zurücksetzen nach 500ms
         setTimeout(() => {
           tapCooldownRef.current = false;
         }, 500);
       });
       
-      // === DOUBLE TAP FÜR VIEW RESET ===
       hammer.on('doubletap', (event) => {
-        // Prevent default
         event.preventDefault && event.preventDefault();
-        
         if (controlsRef.current) {
           console.log("Double tap - Ansicht zurücksetzen");
-          
-          vibrate([30, 50, 30]); // Deutliches Feedback
-          
-          // Ansicht zurücksetzen
+          vibrate([30, 50, 30]);
           controlsRef.current.reset();
         }
-        
-        // Längerer Cooldown nach Double-Tap
         tapCooldownRef.current = true;
         setTimeout(() => {
           tapCooldownRef.current = false;
         }, 800);
       });
       
-      // Speichere die Hammer-Instanz
       hammerRef.current = hammer;
       setIsTouchControlsActive(true);
       

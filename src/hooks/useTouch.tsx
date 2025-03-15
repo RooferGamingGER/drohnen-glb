@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { useIsMobile } from './use-mobile';
 import { useHammerTouch } from './useHammerTouch';
@@ -30,13 +29,11 @@ export const useTouch = ({
   const selectedPointRef = useRef<{id: string, index: number} | null>(null);
   const tapCooldownRef = useRef<boolean>(false);
   
-  // Aktualisieren des Touch-Modus-Status basierend auf Geräteerkennung
   useEffect(() => {
     setIsInTouchMode(isTouchDevice && !hasMouseAttached);
     console.log(`Touch mode in useTouch: ${isTouchDevice && !hasMouseAttached ? 'ENABLED' : 'DISABLED'}`);
   }, [isTouchDevice, hasMouseAttached]);
   
-  // Initialisiere Hammer.js Touch-Steuerungen für Touch-Geräte
   const hammerControls = useHammerTouch({
     containerRef,
     cameraRef,
@@ -45,7 +42,6 @@ export const useTouch = ({
     onTap: (point) => {
       if (tapCooldownRef.current) return;
       
-      // Cooldown setzen, um versehentliche mehrfache Taps zu verhindern
       tapCooldownRef.current = true;
       setTimeout(() => {
         tapCooldownRef.current = false;
@@ -58,12 +54,10 @@ export const useTouch = ({
     }
   });
   
-  // Verarbeitung von Maus-Klicks für Desktop
   const handleMouseClick = useCallback((event: MouseEvent) => {
     if (!modelRef.current || !cameraRef.current || !containerRef.current) return;
-    if (isInTouchMode) return; // Ignoriere bei Touch-Geräten
+    if (isInTouchMode) return;
     
-    // Rechtsklick-Behandlung für Panning
     if (event.button === 2) {
       event.preventDefault();
       if (controlsRef.current) {
@@ -72,7 +66,6 @@ export const useTouch = ({
       return;
     }
     
-    // Linksklick-Behandlung für Modell-Interaktion
     if (event.button === 0 && activeTool !== 'none' && onTouchPoint) {
       const rect = containerRef.current.getBoundingClientRect();
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -87,11 +80,9 @@ export const useTouch = ({
     }
   }, [modelRef, cameraRef, containerRef, controlsRef, activeTool, onTouchPoint, isInTouchMode]);
   
-  // Einrichtung von Event-Listenern basierend auf dem Gerätemodus
   useEffect(() => {
     if (!containerRef.current) return;
     
-    // Verarbeitung von Maus-Events nur auf Desktop
     if (!isInTouchMode) {
       console.log("Maussteuerung aktiviert");
       
@@ -113,10 +104,9 @@ export const useTouch = ({
       window.addEventListener('mouseup', handleMouseUp);
       containerRef.current.addEventListener('contextmenu', handleContextMenu);
       
-      // Konfiguriere OrbitControls für Desktop
       if (controlsRef.current) {
         controlsRef.current.enableRotate = true;
-        controlsRef.current.enablePan = false; // Nur bei rechter Maustaste aktivieren
+        controlsRef.current.enablePan = false;
         controlsRef.current.enableZoom = true;
         controlsRef.current.update();
       }
@@ -129,11 +119,10 @@ export const useTouch = ({
     } else {
       console.log("Touch-Steuerung aktiviert");
       
-      // Konfiguriere OrbitControls für Touch-Geräte
       if (controlsRef.current) {
-        controlsRef.current.enableRotate = false; // Von Hammer.js übernommen
-        controlsRef.current.enablePan = false;    // Von Hammer.js übernommen
-        controlsRef.current.enableZoom = false;   // Von Hammer.js übernommen
+        controlsRef.current.enableRotate = false;
+        controlsRef.current.enablePan = false;
+        controlsRef.current.enableZoom = false;
         controlsRef.current.update();
       }
     }
@@ -150,6 +139,7 @@ export const useTouch = ({
   return {
     isTouchDevice,
     isTouchControlsActive: hammerControls.isTouchControlsActive,
-    isInTouchMode
+    isInTouchMode,
+    lastGestureType: hammerControls.lastGestureType
   };
 };

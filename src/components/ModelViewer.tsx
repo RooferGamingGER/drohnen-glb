@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useModelViewer } from '@/hooks/useModelViewer';
@@ -596,20 +595,17 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
 
   const touchControls = useTouch({
     containerRef,
-    cameraRef: modelViewer.camera,
-    controlsRef: modelViewer.controls,
+    cameraRef: modelViewer.camera as React.MutableRefObject<THREE.PerspectiveCamera | null>,
+    controlsRef: modelViewer.controls as React.MutableRefObject<any>,
     onTouchPoint: (point) => {
       if (modelViewer.activeTool !== 'none') {
         console.log("Touch tap registered with activeTool:", modelViewer.activeTool);
         const worldPoint = point.clone();
         modelViewer.setProgress(100);
                 
-        // Korrigieren des Typproblems durch Überprüfung des Tool-Typs mit den korrekten Werten
         if (modelViewer.activeTool === 'length' || 
             modelViewer.activeTool === 'area' || 
             modelViewer.activeTool === 'height') {
-          // Dies setzt voraus, dass addMeasurementPoint in modelViewer vorhanden ist
-          // Falls nicht, müssen wir den korrekten Funktionsaufruf verwenden
           if (typeof modelViewer.addMeasurementPoint === 'function') {
             modelViewer.addMeasurementPoint(point);
           }
