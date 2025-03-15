@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useModelViewer } from '@/hooks/useModelViewer';
@@ -926,7 +927,7 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <div id="three-scene-container"></div>
+        <div id="three-scene-container" className="w-full h-full"></div>
       </ViewerContainer>
       
       {!forceHideHeader && showHeader && (

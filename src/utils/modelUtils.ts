@@ -23,7 +23,7 @@ export const extractCameraPositionFromModel = (box: THREE.Box3): THREE.Vector3 =
   
   // Calculate a good distance based on the model's size
   const maxDimension = Math.max(size.x, size.y, size.z);
-  const distance = maxDimension * 1.8; // Increased for better visibility
+  const distance = maxDimension * 2.0; // Increased for better visibility
   
   // Position the camera at an angle, adjusted for better initial view
   return new THREE.Vector3(distance, distance * 0.8, distance);
@@ -94,10 +94,31 @@ export const loadGLBModel = (file: File): Promise<THREE.Group> => {
       fileURL,
       (gltf) => {
         URL.revokeObjectURL(fileURL);
+        console.log("Model loaded successfully:", gltf.scene);
+        
+        // Ensure all materials are properly set up
+        gltf.scene.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            // Make sure materials are visible and properly configured
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(material => {
+                  material.needsUpdate = true;
+                });
+              } else {
+                child.material.needsUpdate = true;
+              }
+            }
+          }
+        });
+        
         resolve(gltf.scene);
       },
-      undefined,
+      (progress) => {
+        console.log("Loading progress:", (progress.loaded / progress.total) * 100);
+      },
       (error) => {
+        console.error("Error loading model:", error);
         URL.revokeObjectURL(fileURL);
         reject(error);
       }
@@ -128,11 +149,16 @@ export const optimallyCenterModel = (
   camera: THREE.Camera, 
   controls: any
 ): void => {
+  console.log("Optimally centering model...");
+  
   // Berechne Bounding Box
   const box = new THREE.Box3().setFromObject(model);
   const center = box.getCenter(new THREE.Vector3());
   const size = new THREE.Vector3();
   box.getSize(size);
+  
+  console.log("Model size:", size);
+  console.log("Model center:", center);
   
   // Zentriere das Modell an seinem Schwerpunkt
   model.position.x = -center.x;
@@ -142,6 +168,8 @@ export const optimallyCenterModel = (
   // Berechne die optimale Kameraposition
   const maxDimension = Math.max(size.x, size.y, size.z);
   const distance = maxDimension * 2.0; // Konsistenter Abstand für alle Ansichten
+  
+  console.log("Using distance:", distance);
   
   // Setze Kamera auf eine einheitliche Position mit gutem Überblick
   camera.position.set(distance, distance * 0.8, distance);
@@ -168,6 +196,8 @@ export const optimallyCenterModel = (
     // Verwende einen festen Faktor (1.2) um etwas Abstand um das Modell herum zu haben
     const newPosition = camera.position.clone().normalize().multiplyScalar(requiredDistance * 1.2);
     camera.position.copy(newPosition);
+    
+    console.log("Camera position set to:", camera.position);
     
     if (controls) {
       controls.update();
