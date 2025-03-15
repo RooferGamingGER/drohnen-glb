@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
-import { TouchpadIcon, StretchHorizontal, MousePointerClick, ArrowsMaximize } from 'lucide-react';
+import { TouchpadIcon, StretchHorizontal, MousePointerClick, Maximize } from 'lucide-react';
 
 // This component now serves as a visual guide rather than actual controls
 const TouchControlsPanel: React.FC = () => {
@@ -59,7 +59,7 @@ const TouchControlsPanel: React.FC = () => {
         
         <div className="flex flex-col items-center">
           <div className="bg-muted rounded-full p-3 mb-2">
-            <ArrowsMaximize size={24} />
+            <Maximize size={24} />
           </div>
           <span className="text-sm text-center">Zwei Finger: Zoom</span>
         </div>
