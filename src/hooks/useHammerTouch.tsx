@@ -81,7 +81,7 @@ export const useHammerTouch = ({
     }
     
     try {
-      const hammer = new Hammer(containerRef.current, {
+      const hammerOptions: any = {
         inputClass: Hammer.TouchInput,
         touchAction: 'none',
         cssProps: {
@@ -90,8 +90,10 @@ export const useHammerTouch = ({
           touchCallout: 'none',
           userDrag: 'none',
           userSelect: 'none'
-        } as CustomCssProps
-      });
+        }
+      };
+      
+      const hammer = new Hammer(containerRef.current, hammerOptions);
       
       const pinch = new Hammer.Pinch();
       const rotate = new Hammer.Rotate();
