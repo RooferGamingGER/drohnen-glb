@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { backgroundOptions, BackgroundOption, loadTexture } from '@/utils/modelUtils';
@@ -19,6 +18,7 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
   );
   
   const [hoverPoint, setHoverPoint] = useState<THREE.Vector3 | null>(null);
+  const [progress, setProgress] = useState(0);
   const { isTouchDevice } = useIsMobile();
   
   // Initialize Three.js scene, camera, renderer
@@ -33,7 +33,7 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
   // Initialize model loading functionality
   const {
     isLoading,
-    progress,
+    progress: modelProgress,
     error,
     loadModel,
     modelRef,
@@ -45,6 +45,11 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     controlsRef,
     onLoadComplete
   });
+  
+  // Use model progress for our progress state
+  useEffect(() => {
+    setProgress(modelProgress);
+  }, [modelProgress]);
   
   // Initialize measurement functionality
   const measurements = useMeasurements({
@@ -402,7 +407,7 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     deleteTempPoint: measurements.deleteTempPoint,
     updateMeasurement: measurements.updateMeasurement,
     toggleMeasurementsVisibility,
-    setProgress: (value: number) => setProgress(value),
+    setProgress,
     canUndo: measurements.canUndo,
     tempPoints: measurements.temporaryPoints,
     measurementGroupRef: measurements.measurementGroupRef,

@@ -8,6 +8,7 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
   const [isTablet, setIsTablet] = React.useState<boolean | undefined>(undefined)
   const [isPortrait, setIsPortrait] = React.useState<boolean | undefined>(undefined)
+  const [isTouchDevice, setIsTouchDevice] = React.useState<boolean>(false)
 
   React.useEffect(() => {
     const mobileMql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
@@ -22,12 +23,22 @@ export function useIsMobile() {
       setIsTablet(window.innerWidth < TABLET_BREAKPOINT && window.innerWidth >= MOBILE_BREAKPOINT)
       checkOrientation()
     }
+
+    // Check if device supports touch
+    const checkTouchSupport = () => {
+      setIsTouchDevice(
+        ('ontouchstart' in window) ||
+        (navigator.maxTouchPoints > 0) ||
+        ((navigator as any).msMaxTouchPoints > 0)
+      )
+    }
     
     mobileMql.addEventListener("change", onChange)
     tabletMql.addEventListener("change", onChange)
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     setIsTablet(window.innerWidth < TABLET_BREAKPOINT && window.innerWidth >= MOBILE_BREAKPOINT)
     checkOrientation()
+    checkTouchSupport()
     
     window.addEventListener("resize", checkOrientation)
     window.addEventListener("orientationchange", checkOrientation)
@@ -45,6 +56,7 @@ export function useIsMobile() {
     isMobile: !!isMobile,
     isTablet: !!isTablet,
     isPortrait: !!isPortrait,
+    isTouchDevice,
     // For backward compatibility with code expecting a boolean directly
     [Symbol.toPrimitive](hint: string) {
       return hint === 'boolean' ? !!isMobile : undefined;
