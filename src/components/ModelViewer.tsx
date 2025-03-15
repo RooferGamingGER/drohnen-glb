@@ -922,9 +922,9 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
       )}
       
       <ViewerContainer 
+        ref={containerRef}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        ref={containerRef}
       >
         {/* Three.js scene container */}
       </ViewerContainer>
@@ -995,3 +995,4 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
 };
 
 export default ModelViewer;
+

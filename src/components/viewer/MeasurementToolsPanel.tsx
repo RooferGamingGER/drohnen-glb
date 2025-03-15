@@ -1,4 +1,3 @@
-
 import MeasurementTools from '@/components/MeasurementTools';
 import { Measurement, MeasurementType, MeasurementPoint } from '@/utils/measurementUtils';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarProvider } from "@/components/ui/sidebar";
@@ -14,7 +13,7 @@ interface MeasurementToolsPanelProps {
   onToolChange: (tool: MeasurementType) => void;
   onClearMeasurements: () => void;
   onDeleteMeasurement: (id: string) => void;
-  onUndoLastPoint: () => void;
+  onUndo: () => void;
   onUpdateMeasurement: (id: string, data: Partial<Measurement>) => void;
   onToggleMeasurementVisibility: (id: string) => void;
   onToggleAllMeasurementsVisibility: () => void;
@@ -25,6 +24,7 @@ interface MeasurementToolsPanelProps {
   isMobile: boolean;
   isFullscreen: boolean;
   hasMouse: boolean;
+  isTouchDevice: boolean;
   onNewProject: () => void;
   onTakeScreenshot: () => void;
   tempPoints: MeasurementPoint[];
@@ -38,7 +38,7 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
   onToolChange,
   onClearMeasurements,
   onDeleteMeasurement,
-  onUndoLastPoint,
+  onUndo,
   onUpdateMeasurement,
   onToggleMeasurementVisibility,
   onToggleAllMeasurementsVisibility,
@@ -49,13 +49,13 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
   isMobile,
   isFullscreen,
   hasMouse,
+  isTouchDevice,
   onNewProject,
   onTakeScreenshot,
   tempPoints,
   onDeleteTempPoint,
   onDeleteSinglePoint
 }) => {
-  // If it's a touch device without a mouse, and in portrait mode, don't show measurement tools at all
   if (isMobile && !hasMouse && window.innerHeight > window.innerWidth) {
     return null;
   }
@@ -94,7 +94,6 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
     }
   };
 
-  // Mobile portrait layout (bottom panel)
   if (isMobile && window.innerHeight > window.innerWidth) {
     return (
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-white p-2 border-t border-zinc-200">
@@ -149,7 +148,7 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
               onToolChange={onToolChange}
               onClearMeasurements={onClearMeasurements}
               onDeleteMeasurement={onDeleteMeasurement}
-              onUndoLastPoint={onUndoLastPoint}
+              onUndoLastPoint={onUndo}
               onUpdateMeasurement={onUpdateMeasurement}
               onToggleMeasurementVisibility={onToggleMeasurementVisibility}
               onToggleAllMeasurementsVisibility={onToggleAllMeasurementsVisibility}
@@ -170,7 +169,6 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
     );
   }
 
-  // Desktop or landscape layout (side panel)
   return (
     <SidebarProvider>
       <Sidebar className="z-20 fixed top-0 left-0 bottom-0 w-64 bg-white text-zinc-900 border-r border-zinc-200">
@@ -218,7 +216,7 @@ const MeasurementToolsPanel: React.FC<MeasurementToolsPanelProps> = ({
                 onToolChange={onToolChange}
                 onClearMeasurements={onClearMeasurements}
                 onDeleteMeasurement={onDeleteMeasurement}
-                onUndoLastPoint={onUndoLastPoint}
+                onUndoLastPoint={onUndo}
                 onUpdateMeasurement={onUpdateMeasurement}
                 onToggleMeasurementVisibility={onToggleMeasurementVisibility}
                 onToggleAllMeasurementsVisibility={onToggleAllMeasurementsVisibility}
