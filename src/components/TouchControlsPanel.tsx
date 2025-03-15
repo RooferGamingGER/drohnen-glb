@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
-import { TouchpadIcon, StretchHorizontal, MousePointerClick, Maximize } from 'lucide-react';
+import { TouchpadIcon, StretchHorizontal, MousePointerClick, Maximize, Hand, Move } from 'lucide-react';
 
 // This component now serves as a visual guide rather than actual controls
 const TouchControlsPanel: React.FC = () => {
@@ -66,7 +66,7 @@ const TouchControlsPanel: React.FC = () => {
         
         <div className="flex flex-col items-center">
           <div className="bg-muted rounded-full p-3 mb-2">
-            <TouchpadIcon size={24} />
+            <Move size={24} />
           </div>
           <span className="text-sm text-center">Zwei Finger bewegen: Verschieben</span>
         </div>
@@ -75,7 +75,21 @@ const TouchControlsPanel: React.FC = () => {
           <div className="bg-muted rounded-full p-3 mb-2">
             <MousePointerClick size={24} />
           </div>
-          <span className="text-sm text-center">Doppeltipp: Ansicht zurücksetzen</span>
+          <span className="text-sm text-center">Tippen: Punkt setzen</span>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <div className="bg-muted rounded-full p-3 mb-2">
+            <Hand size={24} />
+          </div>
+          <span className="text-sm text-center">Doppeltippen: Ansicht zurücksetzen</span>
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <div className="bg-muted rounded-full p-3 mb-2">
+            <TouchpadIcon size={24} />
+          </div>
+          <span className="text-sm text-center">Zwischen Taps 0,5s warten</span>
         </div>
       </div>
     </div>

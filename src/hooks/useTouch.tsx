@@ -27,14 +27,23 @@ export const useTouch = ({
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
   const isDraggingRef = useRef<boolean>(false);
   const selectedPointRef = useRef<{id: string, index: number} | null>(null);
+  const tapCooldownRef = useRef<boolean>(false);
   
-  // Initialize Hammer touch controls
+  // Initialize Hammer touch controls for touch devices
   const hammerControls = useHammerTouch({
     containerRef,
     cameraRef,
     controlsRef,
     modelRef,
     onTap: (point) => {
+      if (tapCooldownRef.current) return;
+      
+      // Set cooldown to prevent accidental multiple taps
+      tapCooldownRef.current = true;
+      setTimeout(() => {
+        tapCooldownRef.current = false;
+      }, 500);
+      
       if (activeTool !== 'none' && onTouchPoint) {
         console.log("Touch tap registered with activeTool:", activeTool);
         onTouchPoint(point);
