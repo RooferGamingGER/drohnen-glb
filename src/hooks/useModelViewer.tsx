@@ -21,7 +21,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
   const [progress, setProgress] = useState(0);
   const { isTouchDevice } = useIsMobile();
   
-  // Initialize Three.js scene, camera, renderer
   const { 
     scene: sceneRef,
     camera: cameraRef, 
@@ -30,7 +29,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     updateScene 
   } = useThreeScene({ containerRef });
   
-  // Initialize model loading functionality
   const {
     isLoading,
     progress: modelProgress,
@@ -46,12 +44,10 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     onLoadComplete
   });
   
-  // Use model progress for our progress state
   useEffect(() => {
     setProgress(modelProgress);
   }, [modelProgress]);
   
-  // Initialize measurement functionality
   const measurements = useMeasurements({
     modelRef,
     sceneRef,
@@ -59,7 +55,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     controlsRef
   });
   
-  // Initialize touch control functionality
   useTouch({
     containerRef,
     cameraRef,
@@ -85,14 +80,12 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     }
   });
   
-  // Initialize measurement group when scene is ready
   useEffect(() => {
     if (sceneRef.current) {
       measurements.initMeasurementGroup();
     }
   }, [sceneRef.current]);
   
-  // Add mouse move handler for measurement point hovering
   const handleMouseMove = useCallback((event: MouseEvent) => {
     if (!containerRef.current) return;
     
@@ -194,7 +187,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     measurements.previousMouseRef.current.copy(measurements.mouseRef.current);
   }, [measurements.activeTool, measurements.temporaryPoints, measurements.isDraggingPoint, measurements.hoveredPointId]);
   
-  // Add mouse down handler for point interaction
   const handleMouseDown = useCallback((event: MouseEvent) => {
     if (!containerRef.current || !measurements.measurementGroupRef.current) return;
     
@@ -235,7 +227,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     }
   }, [measurements.hoveredPointId, measurements.isDraggingPoint]);
   
-  // Add mouse up handler to finalize point dragging
   const handleMouseUp = useCallback((event: MouseEvent) => {
     if (measurements.isDraggingPoint) {
       measurements.setIsDraggingPoint(false);
@@ -257,7 +248,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     }
   }, [measurements.isDraggingPoint, measurements.hoveredPointId]);
   
-  // Handle measurement click events
   const handleMeasurementClick = useCallback((event: MouseEvent) => {
     if (measurements.isDraggingPoint) return;
     
@@ -293,7 +283,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     }
   }, [measurements.activeTool, measurements.temporaryPoints, measurements.isDraggingPoint]);
   
-  // Set up mouse event listeners
   useEffect(() => {
     if (!containerRef.current || !isTouchDevice) return;
     
@@ -320,12 +309,10 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     isTouchDevice
   ]);
   
-  // Update canUndo state based on temporary points
   useEffect(() => {
     measurements.setCanUndo(measurements.temporaryPoints.length > 0);
   }, [measurements.temporaryPoints]);
   
-  // Apply background color or texture
   const applyBackground = async (option: BackgroundOption) => {
     if (!sceneRef.current || !rendererRef.current) return;
 
@@ -354,8 +341,7 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
 
     setBackground(option);
   };
-  
-  // Toggle visibility of all measurements
+
   const toggleMeasurementsVisibility = (visible: boolean) => {
     if (!measurements.measurementGroupRef.current) return;
     
@@ -366,7 +352,6 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     });
   };
 
-  // Get necessary functions for point handling
   const createDraggablePointMaterial = (isHovered: boolean) => {
     const material = new THREE.MeshBasicMaterial({
       color: isHovered ? 0xffaa00 : 0xff0000,
@@ -387,7 +372,12 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     return material;
   };
 
-  // Return the complete API
+  const addMeasurementPoint = useCallback((point: THREE.Vector3) => {
+    if (measurements && typeof measurements.addMeasurementPoint === 'function') {
+      measurements.addMeasurementPoint(point);
+    }
+  }, [measurements]);
+
   return {
     isLoading,
     progress,
@@ -418,6 +408,7 @@ export const useModelViewer = ({ containerRef, onLoadComplete }: UseModelViewerP
     loadedModel: modelRef.current,
     updateModelViewer: updateScene,
     adjustCameraToModelSize,
-    isTouchDevice
+    isTouchDevice,
+    addMeasurementPoint
   };
 };

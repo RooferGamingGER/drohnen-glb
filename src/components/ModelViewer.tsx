@@ -1,10 +1,11 @@
+
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useModelViewer } from '@/hooks/useModelViewer';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useTouch } from '@/hooks/use-touch';
+import { useTouch } from '@/hooks/useTouch';
 import { 
   captureScreenshot, 
   exportMeasurementsToPDF, 
@@ -603,8 +604,15 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
         const worldPoint = point.clone();
         modelViewer.setProgress(100);
                 
-        if (modelViewer.activeTool !== 'none' && modelViewer.activeTool !== 'select') {
-          modelViewer.addMeasurementPoint(point);
+        // Korrigieren des Typproblems durch Überprüfung des Tool-Typs mit den korrekten Werten
+        if (modelViewer.activeTool === 'length' || 
+            modelViewer.activeTool === 'area' || 
+            modelViewer.activeTool === 'height') {
+          // Dies setzt voraus, dass addMeasurementPoint in modelViewer vorhanden ist
+          // Falls nicht, müssen wir den korrekten Funktionsaufruf verwenden
+          if (typeof modelViewer.addMeasurementPoint === 'function') {
+            modelViewer.addMeasurementPoint(point);
+          }
         }
       }
     },

@@ -1,4 +1,3 @@
-
 import { useRef, useEffect, useState, useCallback } from 'react';
 import Hammer from 'hammerjs';
 import * as THREE from 'three';
@@ -92,6 +91,7 @@ export const useHammerTouch = ({
           touchCallout: 'none',
           userDrag: 'none',
           userSelect: 'none'
+          // touchSelect wurde entfernt, da es nicht in CssProps Typ existiert
         }
       });
       
