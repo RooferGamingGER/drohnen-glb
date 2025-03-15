@@ -1,6 +1,7 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Move, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TouchControlsPanelProps {
   activeMode: 'none' | 'pan' | 'rotate' | 'zoom';
@@ -11,7 +12,19 @@ const TouchControlsPanel: React.FC<TouchControlsPanelProps> = ({
   activeMode, 
   onModeChange 
 }) => {
-  console.log("TouchControlsPanel rendered with activeMode:", activeMode);
+  const { isTouchDevice } = useIsMobile();
+  const [hasInitiallySet, setHasInitiallySet] = useState(false);
+  
+  console.log("TouchControlsPanel rendered with activeMode:", activeMode, "isTouchDevice:", isTouchDevice);
+
+  useEffect(() => {
+    // For touch devices, default to rotate mode initially if no mode is set
+    if (isTouchDevice && !hasInitiallySet && activeMode === 'none') {
+      console.log("Setting default rotate mode for touch device");
+      onModeChange('rotate');
+      setHasInitiallySet(true);
+    }
+  }, [activeMode, isTouchDevice, hasInitiallySet, onModeChange]);
 
   const handleButtonClick = (mode: 'none' | 'pan' | 'rotate' | 'zoom') => {
     console.log(`Button clicked: ${mode}`);
@@ -26,15 +39,10 @@ const TouchControlsPanel: React.FC<TouchControlsPanelProps> = ({
     }
   };
 
-  // Enable Hammer.js or similar touch gesture library if available in the window object
-  useEffect(() => {
-    // This is a check that would help if we were to add Hammer.js in the future
-    // Currently serves as a placeholder for future enhancement
-    const touchSupported = 'ontouchstart' in window;
-    console.log("Touch support detected:", touchSupported);
-    
-    // We'll rely on the native touch events in the ModelViewer component for now
-  }, []);
+  // Only show controls for touch devices
+  if (!isTouchDevice) {
+    return null;
+  }
 
   return (
     <div className="touch-controls-panel fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white/80 dark:bg-black/80 rounded-full px-4 py-2 flex gap-4 shadow-lg z-50 backdrop-blur">
