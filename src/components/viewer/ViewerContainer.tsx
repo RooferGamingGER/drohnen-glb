@@ -13,21 +13,23 @@ const ViewerContainer = forwardRef<HTMLDivElement, ViewerContainerProps>(
     const { isPortrait, isTouchDevice, hasMouseAttached } = useIsMobile();
     const [touchMode, setTouchMode] = useState(false);
     
-    // Setze den Touch-Modus basierend auf der Geräteerkennung
+    // Set touch mode based on device detection
     useEffect(() => {
-      setTouchMode(isTouchDevice && !hasMouseAttached);
+      setTouchMode(isTouchDevice);
+      console.log(`ViewerContainer: Touch mode ${isTouchDevice ? 'enabled' : 'disabled'}`);
     }, [isTouchDevice, hasMouseAttached]);
     
-    // Prevent default touch behavior on the container but allow necessary interactions
+    // Prevent default touch behavior but allow necessary interactions
     useEffect(() => {
       const container = ref as React.RefObject<HTMLDivElement>;
       if (!container.current || !touchMode) return;
       
-      // Verbesserte Touch-Event-Behandlung
+      // Improved touch event handling with passive: false
       const preventDefaultTouch = (e: TouchEvent) => {
+        // Don't prevent all events by default
         const target = e.target as HTMLElement;
         
-        // Erlaube Touch-Events auf bestimmten Elementen
+        // Allow touch events on specific elements
         const allowTouchOn = [
           'INPUT',
           'BUTTON',
@@ -36,29 +38,30 @@ const ViewerContainer = forwardRef<HTMLDivElement, ViewerContainerProps>(
           'SELECT'
         ];
         
-        // Erlaube Touch-Events auf Elementen mit bestimmten Klassen
+        // Allow touch events on elements with specific classes
         const allowedClasses = [
           'clickable',
           'touch-allow',
           'file-upload'
         ];
         
-        // Prüfe, ob das Element erlaubt ist
+        // Check if element is allowed
         const isAllowedElement = allowTouchOn.includes(target.tagName);
         const hasAllowedClass = allowedClasses.some(className => 
           target.classList.contains(className) || 
           target.closest(`.${className}`) !== null
         );
         
-        // Nur verhindern, wenn nicht auf erlaubten Elementen
+        // Only prevent on 3D viewer area, not controls
         if (!isAllowedElement && !hasAllowedClass) {
+          // We need to prevent default to stop browser from scrolling/zooming
           e.preventDefault();
         }
       };
       
       const containerEl = container.current;
       
-      // Passive: false ist wichtig, damit preventDefault funktioniert
+      // Using passive: false is crucial for preventDefault to work
       containerEl.addEventListener('touchstart', preventDefaultTouch, { passive: false });
       containerEl.addEventListener('touchmove', preventDefaultTouch, { passive: false });
       containerEl.addEventListener('touchend', preventDefaultTouch, { passive: false });
@@ -73,10 +76,15 @@ const ViewerContainer = forwardRef<HTMLDivElement, ViewerContainerProps>(
     return (
       <div 
         ref={ref}
-        className={`relative h-full w-full ${touchMode ? 'touch-none' : ''}`}
+        className={`relative h-full w-full overflow-hidden ${touchMode ? 'touch-none' : ''}`}
         onDragOver={onDragOver}
         onDrop={onDrop}
-        style={{ touchAction: touchMode ? 'none' : 'auto' }}
+        style={{ 
+          touchAction: touchMode ? 'none' : 'auto',
+          WebkitTapHighlightColor: 'rgba(0,0,0,0)',
+          WebkitUserSelect: 'none',
+          userSelect: 'none'
+        }}
         data-touch-mode={touchMode ? 'true' : 'false'}
       >
         {children}

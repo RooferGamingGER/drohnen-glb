@@ -10,6 +10,7 @@ export function useIsMobile() {
   const [isPortrait, setIsPortrait] = React.useState<boolean | undefined>(undefined)
   const [isTouchDevice, setIsTouchDevice] = React.useState<boolean>(false)
   const [hasMouseAttached, setHasMouseAttached] = React.useState<boolean>(false)
+  const touchEventRef = React.useRef<boolean>(false)
 
   React.useEffect(() => {
     const mobileMql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
@@ -25,71 +26,80 @@ export function useIsMobile() {
       checkOrientation()
     }
 
-    // Verbesserte Touch-Erkennung mit mehreren Methoden
+    // Simplified touch detection strategy
     const checkTouchSupport = () => {
+      // Primary detection method: check both standard properties
       const hasTouchPoints = navigator.maxTouchPoints > 0 || (navigator as any).msMaxTouchPoints > 0;
       const hasTouch = 'ontouchstart' in window;
-      const hasPointerEvents = !!window.PointerEvent && navigator.maxTouchPoints > 0;
       
-      // Kombinierte Detection-Strategie
-      setIsTouchDevice(hasTouchPoints || hasTouch || hasPointerEvents);
+      // Most reliable detection for modern browsers
+      const isTouch = hasTouchPoints || hasTouch;
+      console.log(`Touch detection: maxTouchPoints=${navigator.maxTouchPoints}, ontouchstart=${hasTouch ? 'yes' : 'no'}`);
       
-      // Überprüfung auf angeschlossene Maus
+      setIsTouchDevice(isTouch);
+      
+      // Mouse detection happens in parallel rather than influencing touch detection
       checkForMouse();
     }
     
-    // Überprüfung auf angeschlossene Maus
+    // Check for mouse capability separately
     const checkForMouse = () => {
-      // Erste Prüfung: hat Media Query für Hover
+      // Check for hover capability
       const hasHoverCapability = window.matchMedia('(hover: hover)').matches;
       
-      // Zweite Prüfung: Auf Mausbewegung warten
-      let mouseDetected = false;
+      // Set initial value based on hover capability
+      setHasMouseAttached(hasHoverCapability);
       
+      // Add a mouse movement detector
       const mouseListener = () => {
-        mouseDetected = true;
         setHasMouseAttached(true);
         document.removeEventListener('mousemove', mouseListener);
       };
       
-      document.addEventListener('mousemove', mouseListener);
-      
-      // Timeout, falls keine Mausbewegung erkannt wird
-      setTimeout(() => {
-        if (!mouseDetected) {
-          setHasMouseAttached(false);
-        }
-        document.removeEventListener('mousemove', mouseListener);
-      }, 1000);
-      
-      // Setze den initialen Wert auf Basis des hover-Queries
-      setHasMouseAttached(hasHoverCapability);
+      document.addEventListener('mousemove', mouseListener, { once: true });
     }
     
+    // Setup event listeners for changes in browser window
     mobileMql.addEventListener("change", onChange)
     tabletMql.addEventListener("change", onChange)
+    
+    // Initial setup
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
     setIsTablet(window.innerWidth < TABLET_BREAKPOINT && window.innerWidth >= MOBILE_BREAKPOINT)
     checkOrientation()
     checkTouchSupport()
     
+    // Listen for orientation changes
     window.addEventListener("resize", checkOrientation)
     window.addEventListener("orientationchange", checkOrientation)
     
-    // Erneute Überprüfung bei Geräteänderungen
-    window.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "mouse") {
+    // Direct touch and mouse event listeners for runtime detection
+    const handleTouchStart = () => {
+      touchEventRef.current = true;
+      setIsTouchDevice(true);
+    };
+    
+    const handleMouseDown = (e: MouseEvent) => {
+      // Only count real mouse events, not simulated ones from touch
+      if (!touchEventRef.current) {
         setHasMouseAttached(true);
-      } else if (e.pointerType === "touch") {
-        setIsTouchDevice(true);
       }
-    }, { once: true });
+      // Reset touch flag after each event cycle
+      setTimeout(() => {
+        touchEventRef.current = false;
+      }, 500);
+    };
+    
+    window.addEventListener('touchstart', handleTouchStart, { passive: true, once: false });
+    window.addEventListener('mousedown', handleMouseDown, { passive: true });
     
     return () => {
       mobileMql.removeEventListener("change", onChange)
       tabletMql.removeEventListener("change", onChange)
       window.removeEventListener("resize", checkOrientation)
       window.removeEventListener("orientationchange", checkOrientation)
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('mousedown', handleMouseDown)
     }
   }, [])
 

@@ -19,38 +19,39 @@ export const useThreeScene = ({
   const { isTouchDevice, hasMouseAttached } = useIsMobile();
   const [isInTouchMode, setIsInTouchMode] = useState(false);
 
-  // Aktualisiere den Touch-Modus-Status
+  // Update touch mode status
   useEffect(() => {
-    setIsInTouchMode(isTouchDevice && !hasMouseAttached);
+    setIsInTouchMode(isTouchDevice);
+    console.log(`ThreeScene: Touch mode ${isTouchDevice ? 'enabled' : 'disabled'}`);
   }, [isTouchDevice, hasMouseAttached]);
 
   const initScene = () => {
     if (!containerRef.current) return;
     
-    // Szene erstellen
+    // Create scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     
-    // Kamera erstellen
+    // Create camera
     const aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
     const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
     camera.position.z = 5;
     cameraRef.current = camera;
     
-    // Renderer erstellen
+    // Create renderer with optimal settings
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true, 
       alpha: true,
       powerPreference: 'high-performance'
     });
     renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Begrenze PixelRatio für bessere Performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for better performance
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMappingExposure = 1;
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
     
-    // Beleuchtung hinzufügen
+    // Add lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
     
@@ -58,23 +59,24 @@ export const useThreeScene = ({
     directionalLight.position.set(1, 1, 1);
     scene.add(directionalLight);
     
-    // OrbitControls konfigurieren
+    // Configure OrbitControls based on device type
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
     
-    // Basierend auf dem Gerätetyp konfigurieren
+    // In touch mode, OrbitControls will be disabled and Hammer.js will handle gestures
     if (isInTouchMode) {
-      console.log("OrbitControls für Touch-Geräte konfigurieren");
-      controls.enableRotate = false; // Wird von Hammer.js gesteuert
-      controls.enablePan = false;    // Wird von Hammer.js gesteuert
-      controls.enableZoom = false;   // Wird von Hammer.js gesteuert
+      console.log("Configuring OrbitControls for touch devices");
+      controls.enabled = false; // Let Hammer.js control everything
+      controls.enableRotate = false;
+      controls.enablePan = false;
+      controls.enableZoom = false;
       controls.touches = {
         ONE: THREE.TOUCH.ROTATE,
         TWO: THREE.TOUCH.DOLLY_PAN
       };
     } else {
-      console.log("OrbitControls für Desktop konfigurieren");
+      console.log("Configuring OrbitControls for desktop");
       controls.rotateSpeed = 0.7;
       controls.zoomSpeed = 1.2;
       controls.panSpeed = 0.8;
@@ -84,7 +86,7 @@ export const useThreeScene = ({
     controls.update();
     controlsRef.current = controls;
     
-    // Animations-Loop starten
+    // Start animation loop
     const animate = () => {
       if (controlsRef.current) {
         controlsRef.current.update();
@@ -99,7 +101,7 @@ export const useThreeScene = ({
     
     requestRef.current = requestAnimationFrame(animate);
     
-    // Fenstergrößenänderung behandeln
+    // Handle window resizing
     const handleResize = () => {
       if (containerRef.current && cameraRef.current && rendererRef.current) {
         const width = containerRef.current.clientWidth;
@@ -115,7 +117,7 @@ export const useThreeScene = ({
     
     window.addEventListener('resize', handleResize);
     
-    // Bereinigungsfunktion zurückgeben
+    // Return cleanup function
     return () => {
       window.removeEventListener('resize', handleResize);
       
@@ -134,11 +136,11 @@ export const useThreeScene = ({
     };
   };
 
-  // Initialisiere die Szene beim Komponenten-Mount
+  // Initialize scene when component mounts
   useEffect(() => {
     const cleanup = initScene();
     return cleanup;
-  }, [isInTouchMode]); // Neu initialisieren, wenn sich der Touch-Modus ändert
+  }, [isInTouchMode]); // Reinitialize when touch mode changes
 
   const resetCamera = () => {
     if (cameraRef.current) {
