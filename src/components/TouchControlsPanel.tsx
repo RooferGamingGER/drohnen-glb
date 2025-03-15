@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useIsMobile } from '../hooks/use-mobile';
-import { TouchIcon, GestureHorizontal, GestureTap, Rotate3d, Resize } from 'lucide-react';
+import { TouchpadIcon, StretchHorizontal, MousePointerClick, ArrowsMaximize } from 'lucide-react';
 
 // This component now serves as a visual guide rather than actual controls
 const TouchControlsPanel: React.FC = () => {
@@ -31,7 +31,7 @@ const TouchControlsPanel: React.FC = () => {
         onClick={() => setShowHelp(true)}
         aria-label="Show touch controls help"
       >
-        <TouchIcon size={24} />
+        <TouchpadIcon size={24} />
       </button>
     );
   }
@@ -52,28 +52,28 @@ const TouchControlsPanel: React.FC = () => {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="flex flex-col items-center">
           <div className="bg-muted rounded-full p-3 mb-2">
-            <GestureHorizontal size={24} />
+            <StretchHorizontal size={24} />
           </div>
           <span className="text-sm text-center">Ein Finger: Drehen</span>
         </div>
         
         <div className="flex flex-col items-center">
           <div className="bg-muted rounded-full p-3 mb-2">
-            <Resize size={24} />
+            <ArrowsMaximize size={24} />
           </div>
           <span className="text-sm text-center">Zwei Finger: Zoom</span>
         </div>
         
         <div className="flex flex-col items-center">
           <div className="bg-muted rounded-full p-3 mb-2">
-            <Rotate3d size={24} />
+            <TouchpadIcon size={24} />
           </div>
           <span className="text-sm text-center">Zwei Finger bewegen: Verschieben</span>
         </div>
         
         <div className="flex flex-col items-center">
           <div className="bg-muted rounded-full p-3 mb-2">
-            <GestureTap size={24} />
+            <MousePointerClick size={24} />
           </div>
           <span className="text-sm text-center">Doppeltipp: Ansicht zurücksetzen</span>
         </div>
