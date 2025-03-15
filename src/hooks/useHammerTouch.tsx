@@ -11,6 +11,14 @@ interface UseHammerTouchProps {
   onTap?: (point: THREE.Vector3) => void;
 }
 
+interface CustomCssProps {
+  contentZooming: string;
+  tapHighlightColor: string;
+  touchCallout: string;
+  userDrag: string;
+  userSelect: string;
+}
+
 export const useHammerTouch = ({
   containerRef,
   cameraRef,
@@ -82,7 +90,7 @@ export const useHammerTouch = ({
           touchCallout: 'none',
           userDrag: 'none',
           userSelect: 'none'
-        }
+        } as CustomCssProps
       });
       
       const pinch = new Hammer.Pinch();
