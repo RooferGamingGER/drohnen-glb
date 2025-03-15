@@ -100,6 +100,14 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
   
   const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
 
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<any>(null);
+  
+  useEffect(() => {
+    cameraRef.current = modelViewer.camera;
+    controlsRef.current = modelViewer.controls;
+  }, [modelViewer.camera, modelViewer.controls]);
+
   useEffect(() => {
     if (initialFile) {
       handleFileSelected(initialFile);
@@ -595,8 +603,8 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
 
   const touchControls = useTouch({
     containerRef,
-    cameraRef: modelViewer.camera as React.MutableRefObject<THREE.PerspectiveCamera | null>,
-    controlsRef: modelViewer.controls as React.MutableRefObject<any>,
+    cameraRef,
+    controlsRef,
     onTouchPoint: (point) => {
       if (modelViewer.activeTool !== 'none') {
         console.log("Touch tap registered with activeTool:", modelViewer.activeTool);
@@ -803,3 +811,4 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
 };
 
 export default ModelViewer;
+
