@@ -1,3 +1,4 @@
+
 import { useRef, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { useModelViewer } from '@/hooks/useModelViewer';
@@ -905,3 +906,96 @@ const ModelViewer: React.FC<ModelViewerProps> = ({ forceHideHeader = false, init
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      
+      window.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('mousedown', handleRightMouseDown);
+      window.removeEventListener('mousemove', handleRightMouseMove);
+      window.removeEventListener('mouseup', handleRightMouseUp);
+    };
+  }, [
+    handleMouseMove, 
+    handleMouseDown, 
+    handleMouseUp, 
+    handleTouchStart, 
+    handleTouchMove, 
+    handleTouchEnd,
+    handleContextMenu,
+    handleRightMouseDown,
+    handleRightMouseMove,
+    handleRightMouseUp
+  ]);
+
+  return (
+    <div 
+      ref={containerRef}
+      className="w-full h-full relative"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {modelViewer.isLoading && <LoadingOverlay progress={modelViewer.progress} />}
+      
+      {!modelViewer.loadedModel && !modelViewer.isLoading && (
+        <DropZone onFileSelected={handleFileSelected} />
+      )}
+      
+      {/* Three.js scene container */}
+      <ViewerContainer />
+      
+      {/* Header toolbar */}
+      {!forceHideHeader && showHeader && (
+        <ViewerToolbar 
+          onResetView={handleResetView}
+          onNewProject={handleNewProject}
+          onToggleFullscreen={toggleFullscreen}
+          isFullscreen={isFullscreen}
+          onTakeScreenshot={handleTakeScreenshot}
+          onExport={handleExportMeasurements}
+          onToggleMeasurementTools={toggleMeasurementTools}
+          showMeasurementTools={showMeasurementTools}
+          onToggleMeasurementsVisibility={toggleMeasurementsVisibility}
+          measurementsVisible={measurementsVisible}
+        />
+      )}
+      
+      {/* Measurement tools panel */}
+      {showMeasurementTools && modelViewer.loadedModel && (
+        <MeasurementToolsPanel 
+          activeTool={modelViewer.activeTool}
+          onToolChange={handleToolChange}
+          measurements={modelViewer.measurements}
+          onDeleteMeasurement={modelViewer.deleteMeasurement}
+          onToggleVisibility={toggleSingleMeasurementVisibility}
+          onToggleEditMode={toggleEditMode}
+          canUndo={modelViewer.canUndo}
+          onUndo={modelViewer.undoLastPoint}
+          hasMouse={hasMouse}
+          isTouchDevice={isTouchDevice}
+        />
+      )}
+      
+      {/* Touch controls for touch-only devices */}
+      {(isTouchDevice && !hasMouse) && modelViewer.loadedModel && (
+        <TouchControlsPanel
+          activeMode={touchMode}
+          onModeChange={handleTouchModeChange}
+          isMobile={isMobile}
+          isPortrait={isPortrait}
+        />
+      )}
+      
+      {/* Screenshot dialog */}
+      {showScreenshotDialog && screenshotData && (
+        <ScreenshotDialog
+          imageData={screenshotData}
+          onClose={() => setShowScreenshotDialog(false)}
+          onSave={handleSaveScreenshot}
+        />
+      )}
+    </div>
+  );
+};
+
+export default ModelViewer;
